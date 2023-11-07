@@ -7,7 +7,7 @@ pub struct CpuRegister {
     pub x: u8,
     pub y: u8,
     /// program counter (16-bit)
-    pub pc: usize,
+    pub pc: u16,
     /// stack pointer (8-bit)
     pub s: u8,
     /// status register (8-bit wide, used 6-bit)

@@ -1,3 +1,5 @@
+/// NES CPU uses Little-Endian addressing rather than Big-Endian.
+
 #[derive(Copy, Clone, Debug)]
 pub enum AddressingMode {
     Immediate,

@@ -1,3 +1,4 @@
+use crate::mem::MemoryManage;
 use crate::{address::*, opcode::Operation};
 use crate::{constant::NEGATIVE_FLAG, cpu::Cpu6502};
 use anyhow::Result;
@@ -20,7 +21,7 @@ impl Cpu6502 {
 
     /// LDA: Load byte memory into the accumulator
     pub fn LDA(&mut self) -> Result<()> {
-        let param = self.program_data[self.registers.pc as usize];
+        let param = self.mem_read(self.registers.pc)?;
         self.registers.pc += 1;
         self.registers.a = param;
         self.update_zero_and_negative_flags(self.registers.a);
@@ -29,7 +30,7 @@ impl Cpu6502 {
 
     /// LDY: Load byte memory into the register y
     pub fn LDY(&mut self) -> Result<()> {
-        let param = self.program_data[self.registers.pc as usize];
+        let param = self.mem_read(self.registers.pc)?;
         self.registers.pc += 1;
         self.registers.y = param;
         self.update_zero_and_negative_flags(self.registers.y);
@@ -38,7 +39,7 @@ impl Cpu6502 {
 
     /// LDX: Load byte memory into the register x
     pub fn LDX(&mut self) -> Result<()> {
-        let param = self.program_data[self.registers.pc as usize];
+        let param = self.mem_read(self.registers.pc)?;
         self.registers.pc += 1;
         self.registers.x = param;
         self.update_zero_and_negative_flags(self.registers.x);
@@ -54,7 +55,10 @@ impl Cpu6502 {
 
     /// TXA: Copies the current contents of the accumulator into the X register
     pub fn TXA(&mut self) -> Result<()> {
+        println!("TXA executed");
+        println!("{:?}", self.registers);
         self.registers.a = self.registers.x;
+        println!("{:?}", self.registers);
         self.update_zero_and_negative_flags(self.registers.a);
         Ok(())
     }
@@ -82,7 +86,7 @@ impl Cpu6502 {
     /// AND: A logical AND is performed, bit by bit
     /// on the accumulator contents using the contents of a byte of memory.
     pub fn AND(&mut self) -> Result<()> {
-        let param = self.program_data[self.registers.pc as usize];
+        let param = self.mem_read(self.registers.pc)?;
         self.registers.pc += 1;
         self.registers.a = self.registers.a & param;
         self.update_zero_and_negative_flags(self.registers.a);
@@ -105,6 +109,7 @@ impl Cpu6502 {
 
     /// Break the program
     pub fn BRK(&mut self) -> Result<()> {
+        self.running = false;
         return Ok(());
     }
 }
