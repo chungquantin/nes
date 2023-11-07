@@ -5,6 +5,7 @@ use anyhow::{Error, Result};
 use structopt::StructOpt;
 
 use crate::cli::Cli;
+use crate::constant::ADDRESS_BRK;
 use crate::constant::MEMORY_MAX;
 use crate::constant::PC_ADDRESS_RESET;
 use crate::constant::PRG_ROM_ADDRESS;
@@ -42,7 +43,7 @@ pub trait Clocked {
 impl Clocked for Cpu6502 {
     fn clocked(self: &mut Self) -> Result<()> {
         // // load cpu program counter register at $8000
-        while self.running {
+        while self.running && self.registers.pc != ADDRESS_BRK {
             if let Ok(opcode) = self.mem_read(self.registers.pc) {
                 let instr = self.decode_instruction(opcode as u8).unwrap();
                 println!("INSTRUCTION: {:?}", instr);
@@ -114,13 +115,15 @@ impl Cpu6502 {
             ($($opcode:ident),*) => {
                 match instruction.opcode {
                     $(
-                        Operation::$opcode => self.$opcode(),
+                        Operation::$opcode => self.$opcode(instruction),
                     )*
                     _ => unimplemented!()
                 }
             };
         }
-        return execute_opcode!(LDA, LDX, LDY, BRK, TAX, TXA, TAY, TYA, TXS, AND, INX, INY);
+        return execute_opcode!(
+            LDA, LDX, LDY, BRK, TAX, TXA, TAY, TYA, TXS, AND, INX, INY, STA, STX, STY
+        );
     }
 
     /// Read image from a provided input path

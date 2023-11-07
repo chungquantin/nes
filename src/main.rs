@@ -6,12 +6,21 @@ mod instruction;
 mod mem;
 mod opcode;
 mod register;
-use crate::cpu::Clocked;
+use crate::{cpu::Cpu6502, mem::MemoryManage};
 
 fn main() {}
 
 mod tests {
+
     use super::*;
+
+    #[test]
+    fn test_lda_from_memory() {
+        let mut cpu = Cpu6502::default();
+        cpu.mem_write(0x10, 0x55).unwrap();
+        cpu.load_program(vec![0xa5, 0x10, 0x00]).run().unwrap();
+        assert_eq!(cpu.registers.a, 0x55);
+    }
 
     #[test]
     fn test_0xa9_lda_immediate_load_data() {
