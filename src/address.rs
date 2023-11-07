@@ -38,48 +38,73 @@ pub const ind: AddressingMode = Indirect;
 
 impl Cpu6502 {
     // reference: https://skilldrick.github.io/easy6502/#addressing
-    pub fn get_operand_address(&self, mode: &AddressingMode) -> Result<u16> {
+    // return value: (address, value, program counter step)
+    pub fn decode_addressing_mode(&self, mode: AddressingMode) -> Result<(Option<u16>, u16, u16)> {
+        let ptr = self.registers.pc.wrapping_add(1);
         Ok(match mode {
-            AddressingMode::Immediate => self.registers.pc,
-            AddressingMode::ZeroPage => self.mem_read(self.registers.pc)?.into(),
-            AddressingMode::Absolute => self.mem_read_u16(self.registers.pc)?.into(),
-            AddressingMode::ZeroPageX => {
-                let pos = self.mem_read(self.registers.pc)?;
+            imm | rel => {
+                let v = self.mem_read(ptr)?;
+                (Some(ptr), v as u16, 1)
+            }
+            zp => {
+                let addr = self.mem_read(ptr)?.into();
+                let v = self.mem_read(addr)?;
+                (Some(addr), v as u16, 1)
+            }
+            zpx => {
+                let pos = self.mem_read(ptr)?;
                 let addr = pos.wrapping_add(self.registers.x) as u16;
-                addr
+                let v = self.mem_read(ptr)?;
+                (Some(addr), v as u16, 1)
             }
-            AddressingMode::ZeroPageY => {
-                let pos = self.mem_read(self.registers.pc)?;
+            zpy => {
+                let pos = self.mem_read(ptr)?;
                 let addr = pos.wrapping_add(self.registers.y) as u16;
-                addr
+                let v = self.mem_read(ptr)?;
+                (Some(addr), v as u16, 1)
             }
-            AddressingMode::AbsoluteX => {
-                let base = self.mem_read_u16(self.registers.pc)?;
+            abs => {
+                let addr = self.mem_read_u16(ptr)?;
+                let v = self.mem_read(addr)?;
+                (Some(addr), v as u16, 2)
+            }
+            abx => {
+                let base = self.mem_read_u16(ptr)?;
                 let addr = base.wrapping_add(self.registers.x as u16);
-                addr
+                let v = self.mem_read(ptr)?;
+                (Some(addr), v as u16, 2)
             }
-            AddressingMode::AbsoluteY => {
-                let base = self.mem_read_u16(self.registers.pc)?;
+            aby => {
+                let base = self.mem_read_u16(ptr)?;
                 let addr = base.wrapping_add(self.registers.y as u16);
-                addr
+                let v = self.mem_read(ptr)?;
+                (Some(addr), v as u16, 2)
             }
-            AddressingMode::Accumulator => self.registers.a as u16,
+            ind => {
+                let addr = self.mem_read_u16(ptr)?;
+                let jmp_ptr = self.mem_read_u16(addr)?;
+                (Some(jmp_ptr), 0xDEAD, 2)
+            }
             // Indexed Indirect: Read base value from program counter, before dreferencing
             // add x and use value of register x as the address
-            AddressingMode::IndirectX => {
-                let ptr = self.get_operand_address(&AddressingMode::ZeroPageX)?;
-                self.mem_read_u16(ptr)?
+            izx => {
+                let pos = self.mem_read(ptr)?;
+                let ptr = pos.wrapping_add(self.registers.x) as u16;
+                let addr = self.mem_read_u16(ptr)?;
+                let v = self.mem_read(ptr)?;
+                (Some(addr), v as u16, 1)
             }
             // Indirect Indexed: read base value from program counter, dereferenece,
             // add y and return
-            AddressingMode::IndirectY => {
-                let base = self.get_operand_address(&AddressingMode::ZeroPage)?;
+            izy => {
+                let base = self.mem_read(ptr)?.into();
                 let deref_base = self.mem_read_u16(base)?;
-                let deref = deref_base.wrapping_add(self.registers.y as u16);
-                deref
+                let addr = deref_base.wrapping_add(self.registers.y as u16);
+                let v = self.mem_read(ptr)?;
+                (Some(addr), v as u16, 1)
             }
-
-            _ => unimplemented!(),
+            acc => (None, self.registers.a as u16, 1),
+            imp => (None, 0xDEAD, 0),
         })
     }
 }

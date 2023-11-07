@@ -23,6 +23,7 @@ pub struct Cpu6502 {
     /// NES memory uses 16-bit for memory addressing
     /// The stack address space is hardwired to memory page $01, i.e. the address range $0100–$01FF (256–511)
     pub memory: [u8; MEMORY_MAX],
+    pub instr: Option<CpuInstruction>, // The currently executing instruction
 }
 
 impl Default for Cpu6502 {
@@ -32,6 +33,7 @@ impl Default for Cpu6502 {
             clocks_to_pause: 0,
             registers: CpuRegister::default(),
             memory: [0u8; MEMORY_MAX],
+            instr: None,
         }
     }
 }
@@ -45,14 +47,26 @@ impl Clocked for Cpu6502 {
         // // load cpu program counter register at $8000
         while self.running && self.registers.pc != ADDRESS_BRK {
             if let Ok(opcode) = self.mem_read(self.registers.pc) {
-                let instr = self.decode_instruction(opcode as u8).unwrap();
-                println!("INSTRUCTION: {:?}", instr);
+                let mut instr = self.decode_instruction(opcode as u8).unwrap();
+                let (addr, addr_value, num_bytes) =
+                    self.decode_addressing_mode(instr.address_mode)?;
+                instr.target_val = addr_value;
+                instr.target_addr = addr;
+
+                println!(
+                    "PC: ${:0x?} | OPCODE: 0x{:0x?} | INSTRUCTION: {:?}",
+                    self.registers.pc, opcode, instr
+                );
+
+                self.instr = Some(instr);
                 if self.clocks_to_pause > 0 {
                     self.clocks_to_pause -= 1;
                     continue;
                 }
-                self.registers.pc += 1;
+
                 self.execute_instruction(&instr)?;
+
+                self.registers.pc += num_bytes + 1;
                 self.clocks_to_pause += instr.cycle - 1;
             } else {
                 break;
@@ -73,8 +87,11 @@ impl Cpu6502 {
     }
 
     pub fn reset(&mut self) -> Result<()> {
+        self.instr = None;
+
         self.registers.a = 0;
         self.registers.x = 0;
+
         self.reset_status();
         // Reset the address of program counter
         self.registers.pc = self.mem_read_u16(PC_ADDRESS_RESET).unwrap();
@@ -107,6 +124,8 @@ impl Cpu6502 {
             cycle: *cycle,
             address_mode: *address_mode,
             extra_cycle: *extra_cycle,
+            target_addr: None,
+            target_val: 0,
         })
     }
 
@@ -115,7 +134,7 @@ impl Cpu6502 {
             ($($opcode:ident),*) => {
                 match instruction.opcode {
                     $(
-                        Operation::$opcode => self.$opcode(instruction),
+                        Operation::$opcode => self.$opcode(),
                     )*
                     _ => unimplemented!()
                 }
