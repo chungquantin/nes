@@ -7,6 +7,7 @@ mod instruction;
 mod mem;
 mod opcode;
 mod register;
+mod util;
 
 use crate::{cpu::Cpu6502, mem::MemoryManage};
 
@@ -52,6 +53,19 @@ mod tests {
         cpu.load_program(program).run().unwrap();
         cpu.print_register_status();
         assert_eq!(cpu.status_register_byte(true), 0x2c);
+    }
+
+    #[test]
+    fn test_asl() {
+        let mut cpu = crate::cpu::Cpu6502::default();
+        let program: Vec<u8> = vec![
+            0xa9, 0x80, // LDA #$80
+            0xa,
+        ]; // ASL
+        cpu.set_status_register_from_byte(0xe5);
+        cpu.load_program(program).run().unwrap();
+        assert_eq!(cpu.registers.a, 0);
+        assert_eq!(cpu.status_register_byte(true), 0x67);
     }
 
     #[test]

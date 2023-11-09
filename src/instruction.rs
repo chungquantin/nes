@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use crate::constant::NEGATIVE_FLAG;
 use crate::cpu::Cpu6502;
 use crate::mem::MemoryManage;
+use crate::util::get_bit;
 use crate::{address::*, opcode::Operation};
 use anyhow::{Ok, Result};
 
@@ -89,7 +90,13 @@ impl Cpu6502 {
     #[inline]
     pub fn ASL(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
-        self.registers.a = self.registers.a << 1;
+        // This operation shifts all the bits of the accumulator or memory contents one bit left
+        let r = self.read_write_target(instr.write_target)?;
+        let (x, _) = r.overflowing_mul(2);
+        // Bit 0 is set to 0 and bit 7 is placed in the carry flag
+        self.registers.carry = get_bit(r, 7) != 0;
+        self.store_write_target(x, instr.write_target)?;
+        self.update_accumulator_flags();
         Ok(())
     }
 

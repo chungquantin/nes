@@ -157,7 +157,7 @@ impl Cpu6502 {
             };
         }
         return execute_opcode!(
-            ADC, LDA, LDX, LDY, BRK, TAX, TXA, TAY, TYA, TXS, AND, INX, INY, STA, STX, STY
+            ADC, ASL, LDA, LDX, LDY, BRK, TAX, TXA, TAY, TYA, TXS, AND, INX, INY, STA, STX, STY
         );
     }
 
