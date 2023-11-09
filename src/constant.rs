@@ -10,9 +10,11 @@ How to calculate the maximum memory?
 **/
 pub const MEMORY_MAX: usize = 1 << 16; // 0xFFFF
 
+#[allow(unused)]
 pub const ADDRESS_NMI: u16 = 0xFFFA;
 pub const PC_ADDRESS_RESET: u16 = 0xFFFC;
 pub const PRG_ROM_ADDRESS: u16 = 0x8000;
 pub const ADDRESS_BRK: u16 = 0xFFFE;
+#[allow(unused)]
 pub const ADDRESS_TEST_PROGRAM: u16 = 0xC000;
 pub const NEGATIVE_FLAG: u8 = 0x80;

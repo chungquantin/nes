@@ -82,6 +82,7 @@ impl Clocked for Cpu6502 {
 }
 
 impl Cpu6502 {
+    #[allow(unused)]
     pub fn set_status_register_from_byte(&mut self, v: u8) {
         self.registers.carry = v & 0b00000001 > 0;
         self.registers.zero = v & 0b00000010 > 0;
@@ -93,6 +94,7 @@ impl Cpu6502 {
         self.registers.negative = v & 0b10000000 > 0;
     }
 
+    #[allow(unused)]
     pub fn status_register_byte(&self, is_instruction: bool) -> u8 {
         let result = ((self.registers.carry      as u8) << 0) |
             ((self.registers.zero       as u8) << 1) |

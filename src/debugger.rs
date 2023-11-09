@@ -12,11 +12,13 @@ impl<T> CpuDebugger<T>
 where
     T: Binary + Debug,
 {
+    #[allow(unused)]
     pub fn bin(self, value: T) {
         let x = value;
         println!("{x:#b}")
     }
 
+    #[allow(unused)]
     pub fn hex(self, value: T) {
         let x = value;
         println!("{:0x?}", x)

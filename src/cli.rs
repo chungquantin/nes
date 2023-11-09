@@ -7,5 +7,6 @@ pub struct Cli {
     pub path: std::path::PathBuf,
 
     #[structopt(long)]
+    #[allow(unused)]
     print_asm: bool, // Future feature
 }

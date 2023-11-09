@@ -9,18 +9,20 @@ mod opcode;
 mod register;
 mod util;
 
-use crate::{cpu::Cpu6502, mem::MemoryManage};
+use crate::cpu::Cpu6502;
 
-fn main() {}
+fn main() {
+    let mut cpu = Cpu6502::default();
+    cpu.load_program(vec![0x00]).unwrap();
+    cpu.run().unwrap();
+}
 
 mod tests {
 
-    use super::*;
-
     #[test]
     fn test_lda_from_memory() {
-        let mut cpu = Cpu6502::default();
-        cpu.mem_write(0x10, 0x55).unwrap();
+        let mut cpu = crate::Cpu6502::default();
+        crate::mem::MemoryManage::mem_write(&mut cpu, 0x10, 0x55).unwrap();
         cpu.load_program(vec![0xa5, 0x10, 0x00]).unwrap();
         cpu.run().unwrap();
         assert_eq!(cpu.registers.a, 0x55);
@@ -84,7 +86,7 @@ mod tests {
     #[test]
     fn test_0xaa_tax_move_a_to_x() {
         let mut cpu = crate::cpu::Cpu6502::default();
-        cpu.load_program(vec![0xa9, 0x10, 0xaa, 0x00]);
+        cpu.load_program(vec![0xa9, 0x10, 0xaa, 0x00]).unwrap();
         cpu.run().unwrap();
 
         assert_eq!(cpu.registers.x, 0x10)
@@ -93,7 +95,7 @@ mod tests {
     #[test]
     fn test_0x8a_txa_move_x_to_a() {
         let mut cpu = crate::cpu::Cpu6502::default();
-        cpu.load_program(vec![0xa2, 0x10, 0x8a, 0x00]);
+        cpu.load_program(vec![0xa2, 0x10, 0x8a, 0x00]).unwrap();
         cpu.run().unwrap();
 
         assert_eq!(cpu.registers.a, 0x10)
@@ -102,7 +104,8 @@ mod tests {
     #[test]
     fn test_5_ops_working_together() {
         let mut cpu = crate::cpu::Cpu6502::default();
-        cpu.load_program(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
+        cpu.load_program(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00])
+            .unwrap();
         cpu.run().unwrap();
 
         assert_eq!(cpu.registers.x, 0xc1)

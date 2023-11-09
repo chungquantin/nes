@@ -65,6 +65,7 @@ impl Cpu6502 {
 
     /// This instruction adds the contents of a memory location to the accumulator together with the carry bit
     #[inline]
+    #[allow(non_snake_case)]
     pub fn ADC(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         let v = instr.mode_args as u8;
@@ -83,6 +84,7 @@ impl Cpu6502 {
     /// AND: A logical AND is performed, bit by bit
     /// on the accumulator contents using the contents of a byte of memory.
     #[inline]
+    #[allow(non_snake_case)]
     pub fn AND(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         self.registers.a &= instr.mode_args as u8;
@@ -91,6 +93,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn ASL(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         // This operation shifts all the bits of the accumulator or memory contents one bit left
@@ -114,6 +117,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BCC(&mut self) -> Result<()> {
         // If the carry flag is clear then add the relative displacement to the program counter
         // to cause a branch to a new location.
@@ -124,6 +128,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BCS(&mut self) -> Result<()> {
         // If the carry flag is set then add the relative displacement to the program counter
         // to cause a branch to a new location.
@@ -134,6 +139,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BEQ(&mut self) -> Result<()> {
         // If the zero flag is set then add the relative displacement to the program counter
         // to cause a branch to a new location.
@@ -144,6 +150,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BIT(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         let v = instr.mode_args;
@@ -155,6 +162,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BMI(&mut self) -> Result<()> {
         // If the negative flag is set then add the relative displacement to the program counter
         // to cause a branch to a new location.
@@ -165,6 +173,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BNE(&mut self) -> Result<()> {
         // If the zero flag is clear then add the relative displacement to the program counter
         // to cause a branch to a new location.
@@ -175,6 +184,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BPL(&mut self) -> Result<()> {
         // If the negative flag is clear (positive) then add the relative displacement to the program counter
         // to cause a branch to a new location.
@@ -186,12 +196,14 @@ impl Cpu6502 {
 
     /// Break the program
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BRK(&mut self) -> Result<()> {
         // BRK is executed in the main thread of CPU, don't need to implement anything
         unimplemented!()
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BVC(&mut self) -> Result<()> {
         // If the overflow flag is clear then add the relative displacement to the program counter
         // to cause a branch to a new location.
@@ -202,6 +214,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn BVS(&mut self) -> Result<()> {
         // If the overflow flag is set then add the relative displacement to the program counter
         // to cause a branch to a new location.
@@ -212,18 +225,21 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn CLC(&mut self) -> Result<()> {
         self.registers.carry = false;
         Ok(())
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn CLD(&mut self) -> Result<()> {
         self.registers.decimal = false;
         Ok(())
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn CLI(&mut self) -> Result<()> {
         // Clears the interrupt disable flag allowing normal interrupt requests to be serviced.
         self.registers.interrupt_disabled = false;
@@ -231,6 +247,7 @@ impl Cpu6502 {
     }
 
     #[inline]
+    #[allow(non_snake_case)]
     pub fn CLV(&mut self) -> Result<()> {
         // Clears the interrupt disable flag allowing normal interrupt requests to be serviced.
         self.registers.overflow = false;
@@ -239,6 +256,7 @@ impl Cpu6502 {
 
     /// LDA: Load byte memory into the accumulator
     #[inline]
+    #[allow(non_snake_case)]
     pub fn LDA(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         self.registers.a = instr.mode_args as u8;
@@ -248,6 +266,7 @@ impl Cpu6502 {
 
     /// LDY: Load byte memory into the register y
     #[inline]
+    #[allow(non_snake_case)]
     pub fn LDY(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         self.registers.y = instr.mode_args as u8;
@@ -257,6 +276,7 @@ impl Cpu6502 {
 
     /// LDX: Load byte memory into the register x
     #[inline]
+    #[allow(non_snake_case)]
     pub fn LDX(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         self.registers.x = instr.mode_args as u8;
@@ -266,6 +286,7 @@ impl Cpu6502 {
 
     /// TAX: Copies the current contents of the X register into the accumulator
     #[inline]
+    #[allow(non_snake_case)]
     pub fn TAX(&mut self) -> Result<()> {
         self.registers.x = self.registers.a;
         self.update_zero_and_negative_flags(self.registers.x);
@@ -274,6 +295,7 @@ impl Cpu6502 {
 
     /// TXA: Copies the current contents of the accumulator into the X register
     #[inline]
+    #[allow(non_snake_case)]
     pub fn TXA(&mut self) -> Result<()> {
         self.registers.a = self.registers.x;
         self.update_zero_and_negative_flags(self.registers.a);
@@ -282,6 +304,7 @@ impl Cpu6502 {
 
     /// TYA: Copies the current contents of the X register into the accumulator
     #[inline]
+    #[allow(non_snake_case)]
     pub fn TAY(&mut self) -> Result<()> {
         self.registers.y = self.registers.a;
         self.update_zero_and_negative_flags(self.registers.y);
@@ -290,6 +313,7 @@ impl Cpu6502 {
 
     /// TYA: Copies the current contents of the X register into the accumulator
     #[inline]
+    #[allow(non_snake_case)]
     pub fn TYA(&mut self) -> Result<()> {
         self.registers.a = self.registers.y;
         self.update_zero_and_negative_flags(self.registers.a);
@@ -298,6 +322,7 @@ impl Cpu6502 {
 
     /// TXS: Copies the current contents of the X register into the stack register.
     #[inline]
+    #[allow(non_snake_case)]
     pub fn TXS(&mut self) -> Result<()> {
         self.registers.s = self.registers.x;
         Ok(())
@@ -305,6 +330,7 @@ impl Cpu6502 {
 
     /// Adds one to the X register setting the zero and negative flags as appropriate.
     #[inline]
+    #[allow(non_snake_case)]
     pub fn INX(&mut self) -> Result<()> {
         self.registers.x = self.registers.x.wrapping_add(1);
         self.update_zero_and_negative_flags(self.registers.x);
@@ -313,6 +339,7 @@ impl Cpu6502 {
 
     /// Adds one to the Y register setting the zero and negative flags as appropriate.
     #[inline]
+    #[allow(non_snake_case)]
     pub fn INY(&mut self) -> Result<()> {
         self.registers.y = self.registers.y.wrapping_add(1);
         self.update_zero_and_negative_flags(self.registers.y);
@@ -321,6 +348,7 @@ impl Cpu6502 {
 
     /// Store the contents of the accummulator into memory
     #[inline]
+    #[allow(non_snake_case)]
     pub fn STA(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         let addr = instr.write_target.unwrap();
@@ -330,6 +358,7 @@ impl Cpu6502 {
 
     /// Store the contents of the X register into memory
     #[inline]
+    #[allow(non_snake_case)]
     pub fn STX(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         let addr = instr.write_target.unwrap();
@@ -339,6 +368,7 @@ impl Cpu6502 {
 
     /// Store the contents of the Y register into memory
     #[inline]
+    #[allow(non_snake_case)]
     pub fn STY(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
         let addr = instr.write_target.unwrap();
