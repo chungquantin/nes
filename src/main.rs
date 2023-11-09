@@ -3,6 +3,7 @@ mod cli;
 mod constant;
 mod cpu;
 mod debugger;
+mod instr;
 mod instruction;
 mod mem;
 mod opcode;

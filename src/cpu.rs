@@ -7,13 +7,13 @@ use structopt::StructOpt;
 use crate::cli::Cli;
 use crate::constant::ADDRESS_BRK;
 use crate::constant::MEMORY_MAX;
+use crate::constant::NEGATIVE_FLAG;
 use crate::constant::PC_ADDRESS_RESET;
 use crate::constant::PRG_ROM_ADDRESS;
 use crate::debugger::CpuDebugger;
 use crate::instruction::CpuInstruction;
 use crate::mem::MemoryManage;
-use crate::opcode::OPCODE_TABLE;
-use crate::opcode::*;
+use crate::opcode::{Operation, OPCODE_TABLE};
 use crate::register::*;
 
 #[derive(Debug)]
@@ -82,6 +82,33 @@ impl Clocked for Cpu6502 {
 }
 
 impl Cpu6502 {
+    pub fn is_negative(&self, result: u8) -> bool {
+        (result & 0x80) == NEGATIVE_FLAG
+    }
+
+    pub fn update_zero_and_negative_flags(&mut self, result: u8) {
+        self.registers.zero = result == 0x0;
+        // bit masking and get the first bit
+        self.registers.negative = self.is_negative(result);
+    }
+
+    pub fn update_accumulator_flags(&mut self) {
+        self.update_zero_and_negative_flags(self.registers.a);
+    }
+
+    #[allow(dead_code)]
+    pub fn print_register_status(&self) {
+        println!("Carry: {:?}", self.registers.carry);
+        println!("Decimal: {:?}", self.registers.decimal);
+        println!("Negative: {:?}", self.registers.negative);
+        println!("Overflow: {:?}", self.registers.overflow);
+        println!(
+            "interrupt_disabled: {:?}",
+            self.registers.interrupt_disabled
+        );
+        println!("Zero: {:?}", self.registers.zero);
+    }
+
     #[allow(unused)]
     pub fn set_status_register_from_byte(&mut self, v: u8) {
         self.registers.carry = v & 0b00000001 > 0;
@@ -164,11 +191,18 @@ impl Cpu6502 {
         return execute_opcode!(
             ADC, AND, ASL, // Axx
             BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, // Bxx
-            CLC, CLD, CLI, CLV, // Cxx
-            LDA, LDX, LDY, // Lxx
-            TAX, TXA, TAY, TYA, TXS, // Txx
-            INX, INY, // Ixx
-            STA, STX, STY // Sxx
+            CLC, CLD, CLI, CLV, CMP, CPX, CPY, // Cxx
+            DEC, DEX, DEY, // Dxx
+            EOR, // Exx
+            INC, INX, INY, // Ixx
+            JMP, JSR, // Jxx
+            LDA, LDX, LDY, LSR, // Lxx
+            NOP, // Nxx
+            ORA, // Oxx
+            PHA, PHP, PLA, PLP, // Pxx
+            ROL, ROR, RTI, RTS, // Rxx
+            SBC, SEC, SED, SEI, STA, STX, STY, // Sxx
+            TAX, TXA, TAY, TYA, TXS // Txx
         );
     }
 

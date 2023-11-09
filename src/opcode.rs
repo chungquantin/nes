@@ -1,4 +1,5 @@
-use crate::{address::*, instruction::CycleCount};
+use crate::address::*;
+use crate::instruction::CycleCount;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Operation {
