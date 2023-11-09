@@ -14,8 +14,8 @@ pub struct CpuInstruction {
     pub cycle: CycleCount,
     pub address_mode: AddressingMode,
     pub extra_cycle: CycleCount,
-    pub target_val: u16,
-    pub target_addr: Option<u16>,
+    pub mode_args: u16,
+    pub write_target: Option<u16>,
 }
 
 impl Debug for CpuInstruction {
@@ -25,27 +25,136 @@ impl Debug for CpuInstruction {
             .field("Cycle", &self.cycle)
             .field("Address Mode", &self.address_mode)
             .field("Extra cycle", &self.extra_cycle)
-            .field("Target value", &format!("0x{:0x?}", self.target_val))
+            .field("Target value", &format!("0x{:0x?}", self.mode_args))
             .field(
                 "Target address",
-                &format!("0x{:0x?}", self.target_addr.unwrap_or_default()),
+                &format!("0x{:0x?}", self.write_target.unwrap_or_default()),
             )
             .finish()
     }
 }
 
 impl Cpu6502 {
+    fn is_negative(&self, result: u8) -> bool {
+        (result & 0x80) == NEGATIVE_FLAG
+    }
+
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         self.registers.zero = result == 0x0;
         // bit masking and get the first bit
-        self.registers.negative = (result & 0x80) == NEGATIVE_FLAG;
+        self.registers.negative = self.is_negative(result);
+    }
+
+    fn update_accumulator_flags(&mut self) {
+        self.update_zero_and_negative_flags(self.registers.a);
+    }
+
+    #[allow(dead_code)]
+    pub fn print_register_status(&self) {
+        println!("Carry: {:?}", self.registers.carry);
+        println!("Decimal: {:?}", self.registers.decimal);
+        println!("Negative: {:?}", self.registers.negative);
+        println!("Overflow: {:?}", self.registers.overflow);
+        println!("Interrupted: {:?}", self.registers.interrupted);
+        println!("Zero: {:?}", self.registers.zero);
+    }
+
+    /// This instruction adds the contents of a memory location to the accumulator together with the carry bit
+    #[inline]
+    pub fn ADC(&mut self) -> Result<()> {
+        let instr = self.instr.unwrap();
+        let v = instr.mode_args as u8;
+        let (x1, o1) = v.overflowing_add(self.registers.a);
+        let (x2, o2) = x1.overflowing_add(self.registers.carry as u8);
+
+        self.registers.carry = o1 | o2;
+        let signed_sum =
+            (v as i8 as i16) + (self.registers.a as i8 as i16) + (self.registers.carry as i16);
+        self.registers.a = x2;
+        self.registers.overflow = (signed_sum < -128) || (signed_sum > 127);
+        self.update_accumulator_flags();
+        Ok(())
+    }
+
+    /// AND: A logical AND is performed, bit by bit
+    /// on the accumulator contents using the contents of a byte of memory.
+    #[inline]
+    pub fn AND(&mut self) -> Result<()> {
+        let instr = self.instr.unwrap();
+        self.registers.a &= instr.mode_args as u8;
+        self.update_accumulator_flags();
+        Ok(())
+    }
+
+    #[inline]
+    pub fn ASL(&mut self) -> Result<()> {
+        let instr = self.instr.unwrap();
+        self.registers.a = self.registers.a << 1;
+        Ok(())
+    }
+
+    #[inline]
+    pub fn BCC(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    pub fn BCS(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    pub fn BEQ(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    pub fn BIT(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    pub fn BMI(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    pub fn BNE(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    pub fn BPL(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    /// Break the program
+    #[inline]
+    pub fn BRK(&mut self) -> Result<()> {
+        self.running = false;
+        return Ok(());
+    }
+
+    #[inline]
+    pub fn BVC(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    pub fn BVS(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    #[inline]
+    pub fn CLC(&mut self) -> Result<()> {
+        Ok(())
     }
 
     /// LDA: Load byte memory into the accumulator
     #[inline]
     pub fn LDA(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
-        self.registers.a = instr.target_val as u8;
+        self.registers.a = instr.mode_args as u8;
         self.update_zero_and_negative_flags(self.registers.a);
         Ok(())
     }
@@ -54,7 +163,7 @@ impl Cpu6502 {
     #[inline]
     pub fn LDY(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
-        self.registers.y = instr.target_val as u8;
+        self.registers.y = instr.mode_args as u8;
         self.update_zero_and_negative_flags(self.registers.y);
         Ok(())
     }
@@ -63,7 +172,7 @@ impl Cpu6502 {
     #[inline]
     pub fn LDX(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
-        self.registers.x = instr.target_val as u8;
+        self.registers.x = instr.mode_args as u8;
         self.update_zero_and_negative_flags(self.registers.x);
         Ok(())
     }
@@ -107,17 +216,6 @@ impl Cpu6502 {
         Ok(())
     }
 
-    /// AND: A logical AND is performed, bit by bit
-    /// on the accumulator contents using the contents of a byte of memory.
-    #[inline]
-    pub fn AND(&mut self) -> Result<()> {
-        let param = self.mem_read(self.registers.pc)?;
-        self.registers.pc += 1;
-        self.registers.a = self.registers.a & param;
-        self.update_zero_and_negative_flags(self.registers.a);
-        Ok(())
-    }
-
     /// Adds one to the X register setting the zero and negative flags as appropriate.
     #[inline]
     pub fn INX(&mut self) -> Result<()> {
@@ -138,7 +236,7 @@ impl Cpu6502 {
     #[inline]
     pub fn STA(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
-        let addr = instr.target_addr.unwrap();
+        let addr = instr.write_target.unwrap();
         self.mem_write(addr, self.registers.a)?;
         Ok(())
     }
@@ -147,7 +245,7 @@ impl Cpu6502 {
     #[inline]
     pub fn STX(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
-        let addr = instr.target_addr.unwrap();
+        let addr = instr.write_target.unwrap();
         self.mem_write(addr, self.registers.x)?;
         Ok(())
     }
@@ -156,15 +254,8 @@ impl Cpu6502 {
     #[inline]
     pub fn STY(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
-        let addr = instr.target_addr.unwrap();
+        let addr = instr.write_target.unwrap();
         self.mem_write(addr, self.registers.y)?;
         Ok(())
-    }
-
-    /// Break the program
-    #[inline]
-    pub fn BRK(&mut self) -> Result<()> {
-        self.running = false;
-        return Ok(());
     }
 }

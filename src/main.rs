@@ -2,10 +2,12 @@ mod address;
 mod cli;
 mod constant;
 mod cpu;
+mod debugger;
 mod instruction;
 mod mem;
 mod opcode;
 mod register;
+
 use crate::{cpu::Cpu6502, mem::MemoryManage};
 
 fn main() {}
@@ -29,7 +31,27 @@ mod tests {
 
         assert_eq!(cpu.registers.a, 0x05);
         assert!(!cpu.registers.zero);
-        assert!(cpu.registers.negative);
+        assert!(!cpu.registers.negative);
+    }
+
+    #[test]
+    fn test_adc() {
+        let mut cpu = crate::cpu::Cpu6502::default();
+        let program: Vec<u8> = vec![
+            0xA9, 0x00, // LDA #$00
+            0x69, 0x69, // ADC #$69
+        ];
+        // 0x6E = 1101110
+        cpu.set_status_register_from_byte(0x6E);
+
+        assert!(cpu.registers.zero);
+        assert!(cpu.registers.interrupted);
+        assert!(cpu.registers.overflow);
+        assert!(cpu.registers.decimal);
+
+        cpu.load_program(program).run().unwrap();
+        cpu.print_register_status();
+        assert_eq!(cpu.status_register_byte(true), 0x2c);
     }
 
     #[test]

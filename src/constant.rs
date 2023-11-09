@@ -15,4 +15,4 @@ pub const PC_ADDRESS_RESET: u16 = 0xFFFC;
 pub const PRG_ROM_ADDRESS: u16 = 0x8000;
 pub const ADDRESS_BRK: u16 = 0xFFFE;
 pub const ADDRESS_TEST_PROGRAM: u16 = 0xC000;
-pub const NEGATIVE_FLAG: u8 = 0;
+pub const NEGATIVE_FLAG: u8 = 0x80;

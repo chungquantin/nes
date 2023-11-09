@@ -9,6 +9,7 @@ use crate::constant::ADDRESS_BRK;
 use crate::constant::MEMORY_MAX;
 use crate::constant::PC_ADDRESS_RESET;
 use crate::constant::PRG_ROM_ADDRESS;
+use crate::debugger::CpuDebugger;
 use crate::instruction::CpuInstruction;
 use crate::mem::MemoryManage;
 use crate::opcode::OPCODE_TABLE;
@@ -17,6 +18,7 @@ use crate::register::*;
 
 #[derive(Debug)]
 pub struct Cpu6502 {
+    pub debugger: CpuDebugger<u8>,
     pub running: bool,
     pub clocks_to_pause: u8,
     pub registers: CpuRegister,
@@ -28,7 +30,9 @@ pub struct Cpu6502 {
 
 impl Default for Cpu6502 {
     fn default() -> Self {
+        let debugger = CpuDebugger::default();
         Self {
+            debugger,
             running: false,
             clocks_to_pause: 0,
             registers: CpuRegister::default(),
@@ -50,8 +54,8 @@ impl Clocked for Cpu6502 {
                 let mut instr = self.decode_instruction(opcode as u8).unwrap();
                 let (addr, addr_value, num_bytes) =
                     self.decode_addressing_mode(instr.address_mode)?;
-                instr.target_val = addr_value;
-                instr.target_addr = addr;
+                instr.mode_args = addr_value;
+                instr.write_target = addr;
 
                 println!(
                     "PC: ${:0x?} | OPCODE: 0x{:0x?} | INSTRUCTION: {:?}",
@@ -77,13 +81,27 @@ impl Clocked for Cpu6502 {
 }
 
 impl Cpu6502 {
-    fn reset_status(&mut self) {
-        self.registers.carry = false;
-        self.registers.zero = false;
-        self.registers.interrupted = false;
-        self.registers.decimal = false;
-        self.registers.overflow = false;
-        self.registers.negative = false;
+    pub fn set_status_register_from_byte(&mut self, v: u8) {
+        self.registers.carry = v & 0b00000001 > 0;
+        self.registers.zero = v & 0b00000010 > 0;
+        self.registers.interrupted = v & 0b00000100 > 0;
+        self.registers.decimal = v & 0b00001000 > 0;
+        // Break isn't a real register
+        // Bit 5 is unused
+        self.registers.overflow = v & 0b01000000 > 0;
+        self.registers.negative = v & 0b10000000 > 0;
+    }
+
+    pub fn status_register_byte(&self, is_instruction: bool) -> u8 {
+        let result = ((self.registers.carry      as u8) << 0) |
+            ((self.registers.zero       as u8) << 1) |
+            ((self.registers.interrupted as u8) << 2) |
+            ((self.registers.decimal    as u8) << 3) |
+            (0                       << 4) | // Break flag
+            ((if is_instruction {1} else {0}) << 5) |
+            ((self.registers.overflow   as u8) << 6) |
+            ((self.registers.negative   as u8) << 7);
+        return result;
     }
 
     pub fn reset(&mut self) -> Result<()> {
@@ -91,8 +109,6 @@ impl Cpu6502 {
 
         self.registers.a = 0;
         self.registers.x = 0;
-
-        self.reset_status();
         // Reset the address of program counter
         self.registers.pc = self.mem_read_u16(PC_ADDRESS_RESET).unwrap();
         Ok(())
@@ -124,8 +140,8 @@ impl Cpu6502 {
             cycle: *cycle,
             address_mode: *address_mode,
             extra_cycle: *extra_cycle,
-            target_addr: None,
-            target_val: 0,
+            write_target: None,
+            mode_args: 0,
         })
     }
 
@@ -141,16 +157,17 @@ impl Cpu6502 {
             };
         }
         return execute_opcode!(
-            LDA, LDX, LDY, BRK, TAX, TXA, TAY, TYA, TXS, AND, INX, INY, STA, STX, STY
+            ADC, LDA, LDX, LDY, BRK, TAX, TXA, TAY, TYA, TXS, AND, INX, INY, STA, STX, STY
         );
     }
 
     /// Read image from a provided input path
+    #[allow(dead_code)]
     fn load_image(self: &mut Self) {
         let cli = Cli::from_args();
 
         let f = File::open(cli.path).expect("couldn't open file");
-        let mut f = BufReader::new(f);
+        let f = BufReader::new(f);
         println!("{}", f.capacity());
     }
 }
