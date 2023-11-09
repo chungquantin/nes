@@ -1,6 +1,6 @@
 use crate::{address::*, instruction::CycleCount};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Operation {
     ADC,
     AND,

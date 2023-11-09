@@ -19,7 +19,6 @@ use crate::register::*;
 #[derive(Debug)]
 pub struct Cpu6502 {
     pub debugger: CpuDebugger<u8>,
-    pub running: bool,
     pub clocks_to_pause: u8,
     pub registers: CpuRegister,
     /// NES memory uses 16-bit for memory addressing
@@ -33,7 +32,6 @@ impl Default for Cpu6502 {
         let debugger = CpuDebugger::default();
         Self {
             debugger,
-            running: false,
             clocks_to_pause: 0,
             registers: CpuRegister::default(),
             memory: [0u8; MEMORY_MAX],
@@ -49,7 +47,7 @@ pub trait Clocked {
 impl Clocked for Cpu6502 {
     fn clocked(self: &mut Self) -> Result<()> {
         // // load cpu program counter register at $8000
-        while self.running && self.registers.pc != ADDRESS_BRK {
+        while self.registers.pc != ADDRESS_BRK {
             if let Ok(opcode) = self.mem_read(self.registers.pc) {
                 let mut instr = self.decode_instruction(opcode as u8).unwrap();
                 let (addr, addr_value, num_bytes) =
@@ -66,6 +64,9 @@ impl Clocked for Cpu6502 {
                 if self.clocks_to_pause > 0 {
                     self.clocks_to_pause -= 1;
                     continue;
+                }
+                if instr.opcode == Operation::BRK {
+                    break;
                 }
 
                 self.execute_instruction(&instr)?;
@@ -84,7 +85,7 @@ impl Cpu6502 {
     pub fn set_status_register_from_byte(&mut self, v: u8) {
         self.registers.carry = v & 0b00000001 > 0;
         self.registers.zero = v & 0b00000010 > 0;
-        self.registers.interrupted = v & 0b00000100 > 0;
+        self.registers.interrupt_disabled = v & 0b00000100 > 0;
         self.registers.decimal = v & 0b00001000 > 0;
         // Break isn't a real register
         // Bit 5 is unused
@@ -95,7 +96,7 @@ impl Cpu6502 {
     pub fn status_register_byte(&self, is_instruction: bool) -> u8 {
         let result = ((self.registers.carry      as u8) << 0) |
             ((self.registers.zero       as u8) << 1) |
-            ((self.registers.interrupted as u8) << 2) |
+            ((self.registers.interrupt_disabled as u8) << 2) |
             ((self.registers.decimal    as u8) << 3) |
             (0                       << 4) | // Break flag
             ((if is_instruction {1} else {0}) << 5) |
@@ -114,7 +115,7 @@ impl Cpu6502 {
         Ok(())
     }
 
-    pub fn load_program(self: &mut Self, program: Vec<u8>) -> &mut Self {
+    pub fn load_program(self: &mut Self, program: Vec<u8>) -> Result<()> {
         // $8000–$FFFF: ROM and mapper registers ((see MMC1 and UxROM for examples))
         let program_rom_address = PRG_ROM_ADDRESS as usize;
         self.memory[program_rom_address..(program_rom_address + program.len())]
@@ -123,12 +124,14 @@ impl Cpu6502 {
         // Write the value of program counter as the start address of PRG ROM
         self.mem_write_u16(PC_ADDRESS_RESET, PRG_ROM_ADDRESS)
             .unwrap();
-        return self;
+
+        // Reset the cpu after loading the program
+        self.reset()?;
+
+        Ok(())
     }
 
     pub fn run(self: &mut Self) -> Result<()> {
-        self.reset()?;
-        self.running = true;
         self.clocked()?;
         Ok(())
     }
@@ -157,7 +160,13 @@ impl Cpu6502 {
             };
         }
         return execute_opcode!(
-            ADC, ASL, LDA, LDX, LDY, BRK, TAX, TXA, TAY, TYA, TXS, AND, INX, INY, STA, STX, STY
+            ADC, AND, ASL, // Axx
+            BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, // Bxx
+            CLC, CLD, CLI, CLV, // Cxx
+            LDA, LDX, LDY, // Lxx
+            TAX, TXA, TAY, TYA, TXS, // Txx
+            INX, INY, // Ixx
+            STA, STX, STY // Sxx
         );
     }
 
