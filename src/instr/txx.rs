@@ -43,7 +43,7 @@ impl Cpu6502 {
     #[inline]
     #[allow(non_snake_case)]
     pub fn TXS(&mut self) -> Result<()> {
-        self.registers.s = self.registers.x;
+        self.registers.sp = self.registers.x;
         Ok(())
     }
 }

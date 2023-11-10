@@ -24,6 +24,12 @@ impl Cpu6502 {
     #[inline]
     #[allow(non_snake_case)]
     pub fn INC(&mut self) -> Result<()> {
+        let instr = self.instr.unwrap();
+        let value = instr.mode_args.wrapping_add(1) as u8;
+        let addr = instr.write_target;
+        // Rewrite the new value to the memory location
+        self.store_write_target(value, addr)?;
+        self.update_zero_and_negative_flags(self.read_write_target(addr)?);
         Ok(())
     }
 }

@@ -12,9 +12,11 @@ use crate::constant::PC_ADDRESS_RESET;
 use crate::constant::PRG_ROM_ADDRESS;
 use crate::debugger::CpuDebugger;
 use crate::instruction::CpuInstruction;
-use crate::mem::MemoryManage;
+use crate::mem::Mem;
 use crate::opcode::{Operation, OPCODE_TABLE};
 use crate::register::*;
+use crate::stack::get_sp_offset;
+use crate::stack::Stacked;
 
 #[derive(Debug)]
 pub struct Cpu6502 {
@@ -55,19 +57,20 @@ impl Clocked for Cpu6502 {
                 instr.mode_args = addr_value;
                 instr.write_target = addr;
 
-                println!(
-                    "PC: ${:0x?} | OPCODE: 0x{:0x?} | INSTRUCTION: {:?}",
-                    self.registers.pc, opcode, instr
-                );
+                if instr.opcode == Operation::BRK {
+                    println!("PROGRAM BREAK!");
+                    break;
+                }
 
                 self.instr = Some(instr);
                 if self.clocks_to_pause > 0 {
                     self.clocks_to_pause -= 1;
                     continue;
                 }
-                if instr.opcode == Operation::BRK {
-                    break;
-                }
+                println!(
+                    "PC: ${:0x?} | OPCODE: 0x{:0x?} | INSTRUCTION: {:?}",
+                    self.registers.pc, opcode, instr
+                );
 
                 self.execute_instruction(&instr)?;
 
@@ -81,7 +84,58 @@ impl Clocked for Cpu6502 {
     }
 }
 
+impl Stacked for Cpu6502 {
+    #[must_use]
+    #[inline]
+    fn push_stack(&mut self, val: u8) -> Result<()> {
+        let sp = self.registers.sp;
+        // decrease the stack pointer by 1, write to the base + offset address
+        self.mem_write(get_sp_offset(sp), val)?;
+        self.registers.sp = self.registers.sp.wrapping_sub(1);
+        Ok(())
+    }
+
+    #[must_use]
+    #[inline]
+    fn pop_stack(&mut self) -> Result<u8> {
+        let sp = self.registers.sp;
+        // increase the stack pointer by 1, read from the base + offset address
+        self.registers.sp = self.registers.sp.wrapping_add(1);
+        self.mem_read(get_sp_offset(sp))
+    }
+}
+
+impl Mem for Cpu6502 {
+    fn mem_read(&self, addr: u16) -> Result<u8> {
+        return Ok(self.memory[addr as usize]);
+    }
+
+    fn mem_write(&mut self, addr: u16, data: u8) -> Result<()> {
+        self.memory[addr as usize] = data;
+        Ok(())
+    }
+}
+
 impl Cpu6502 {
+    // memory
+    pub fn read_write_target(&self, write_target: Option<u16>) -> Result<u8> {
+        Ok(match write_target {
+            None => self.registers.a,
+            Some(ptr) => self.mem_read(ptr)?,
+        })
+    }
+
+    pub fn store_write_target(&mut self, v: u8, write_target: Option<u16>) -> Result<()> {
+        match write_target {
+            None => self.registers.a = v,
+            Some(ptr) => {
+                self.mem_write(ptr, v)?;
+            }
+        }
+        Ok(())
+    }
+
+    // instruction handler utilities
     pub fn is_negative(&self, result: u8) -> bool {
         (result & 0x80) == NEGATIVE_FLAG
     }
@@ -111,6 +165,7 @@ impl Cpu6502 {
 
     #[allow(unused)]
     pub fn set_status_register_from_byte(&mut self, v: u8) {
+        // N.O._._.D.I.Z.C
         self.registers.carry = v & 0b00000001 > 0;
         self.registers.zero = v & 0b00000010 > 0;
         self.registers.interrupt_disabled = v & 0b00000100 > 0;

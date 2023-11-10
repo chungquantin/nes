@@ -9,7 +9,7 @@ pub struct CpuRegister {
     /// program counter (16-bit)
     pub pc: u16,
     /// stack pointer (8-bit)
-    pub s: u8,
+    pub sp: u8,
     /// status register (8-bit wide, used 6-bit)
     pub carry: bool, // 0
     pub zero: bool,               // 10

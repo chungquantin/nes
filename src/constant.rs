@@ -18,3 +18,6 @@ pub const ADDRESS_BRK: u16 = 0xFFFE;
 #[allow(unused)]
 pub const ADDRESS_TEST_PROGRAM: u16 = 0xC000;
 pub const NEGATIVE_FLAG: u8 = 0x80;
+// $0100–$01FF: The page containing the stack, which can be located anywhere here,
+// but typically starts at $01FF
+pub const SP_BASE_ADDRESS: u16 = 0x0100;

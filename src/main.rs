@@ -8,6 +8,7 @@ mod instruction;
 mod mem;
 mod opcode;
 mod register;
+mod stack;
 mod util;
 
 use crate::cpu::Cpu6502;
@@ -23,7 +24,7 @@ mod tests {
     #[test]
     fn test_lda_from_memory() {
         let mut cpu = crate::Cpu6502::default();
-        crate::mem::MemoryManage::mem_write(&mut cpu, 0x10, 0x55).unwrap();
+        crate::mem::Mem::mem_write(&mut cpu, 0x10, 0x55).unwrap();
         cpu.load_program(vec![0xa5, 0x10, 0x00]).unwrap();
         cpu.run().unwrap();
         assert_eq!(cpu.registers.a, 0x55);
@@ -139,5 +140,56 @@ mod tests {
 
         println!("PC: {}", cpu.registers.pc);
         assert_eq!(cpu.registers.pc - pc, 2); // Branch not taken
+    }
+
+    #[test]
+    fn test_ror() {
+        let mut cpu = crate::cpu::Cpu6502::default();
+        let program: Vec<u8> = vec![
+            0xa9, 0x55, // LDA #$55
+            0x6a,
+        ]; // ROR
+        cpu.load_program(program).unwrap();
+        cpu.set_status_register_from_byte(0x24);
+        cpu.run().unwrap();
+        assert_eq!(cpu.registers.a, 0x2A);
+        assert_eq!(cpu.status_register_byte(true), 0x25);
+    }
+
+    #[test]
+    fn test_jsr() {
+        let mut cpu = crate::cpu::Cpu6502::default();
+        let program: Vec<u8> = vec![
+            0x20, 0x03, 0xc0, // JSR $c003
+            0x68, // PLA
+        ];
+        cpu.load_program(program).unwrap();
+        cpu.run().unwrap();
+        assert_eq!(cpu.registers.a, 0x02);
+    }
+
+    #[test]
+    fn test_lsr() {
+        let mut cpu = crate::cpu::Cpu6502::default();
+        let program: Vec<u8> = vec![
+            0xa9, 0x01, // LDA #$01
+            0x4a,
+        ]; // LSR
+        cpu.load_program(program).unwrap();
+        cpu.set_status_register_from_byte(0x65);
+        cpu.run().unwrap();
+        assert_eq!(cpu.status_register_byte(true), 0x67);
+    }
+
+    #[test]
+    fn test_cmp() {
+        let program: Vec<u8> = vec![0xc9, 0x4d, 0x0]; // CMP #$4D
+        let mut cpu = crate::cpu::Cpu6502::default();
+        cpu.load_program(program).unwrap();
+
+        cpu.registers.a = 0x4D;
+        cpu.set_status_register_from_byte(0x27);
+        cpu.run().unwrap();
+        assert_eq!(cpu.status_register_byte(true), 0x27);
     }
 }

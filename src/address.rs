@@ -20,7 +20,7 @@ pub enum AddressingMode {
 use anyhow::Result;
 use AddressingMode::*;
 
-use crate::{cpu::Cpu6502, mem::MemoryManage};
+use crate::{cpu::Cpu6502, mem::Mem};
 
 pub const ABS: AddressingMode = Absolute;
 pub const ACC: AddressingMode = Accumulator;

@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::{cpu::Cpu6502, mem::MemoryManage, util::get_bit};
+use crate::{cpu::Cpu6502, util::get_bit};
 
 impl Cpu6502 {
     /// This instruction adds the contents of a memory location to the accumulator together with the carry bit
@@ -13,6 +13,7 @@ impl Cpu6502 {
         let (x2, o2) = x1.overflowing_add(self.registers.carry as u8);
 
         self.registers.carry = o1 | o2;
+        // Set if sign bit is incorrect
         let signed_sum =
             (v as i8 as i16) + (self.registers.a as i8 as i16) + (self.registers.carry as i16);
         self.registers.a = x2;
@@ -40,7 +41,7 @@ impl Cpu6502 {
         let r = self.read_write_target(instr.write_target)?;
         let (x, _) = r.overflowing_mul(2);
         // Bit 0 is set to 0 and bit 7 is placed in the carry flag
-        self.registers.carry = get_bit(r, 7) != 0;
+        self.registers.carry = get_bit(r, 7) > 0;
         self.store_write_target(x, instr.write_target)?;
         self.update_accumulator_flags();
         Ok(())
