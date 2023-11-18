@@ -10,7 +10,7 @@ pub trait Stacked {
     fn pop_stack(&mut self) -> Result<u8>;
 
     fn push_stack16(&mut self, val: u16) -> Result<()> {
-        let [lo, hi] = val.to_le_bytes();
+        let (hi, lo) = (((val & 0xFF00) >> 8) as u8, (val & 0xFF) as u8);
         self.push_stack(hi)?;
         self.push_stack(lo)?;
         Ok(())
@@ -19,7 +19,8 @@ pub trait Stacked {
     fn pop_stack16(&mut self) -> Result<u16> {
         let lo = self.pop_stack()? as u16;
         let hi = self.pop_stack()? as u16;
-        Ok((lo << 8) | hi)
+        let res = (hi << 8) | lo;
+        Ok(res)
     }
 }
 

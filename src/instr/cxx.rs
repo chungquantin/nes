@@ -34,8 +34,8 @@ impl Cpu6502 {
     }
 
     fn execute_cmp(&mut self, a: u16, b: u16) {
-        let (result, o) = a.overflowing_sub(b);
-        self.registers.carry = o;
+        let (result, _) = a.overflowing_sub(b);
+        self.registers.carry = a >= b;
         self.update_zero_and_negative_flags(result as u8);
     }
 

@@ -1,6 +1,6 @@
-use anyhow::Result;
+use anyhow::{Ok, Result};
 
-use crate::{cpu::Cpu6502, util::get_bit};
+use crate::{constant::ADDRESS_BRK, cpu::Cpu6502, mem::Mem, stack::Stacked, util::get_bit};
 
 impl Cpu6502 {
     fn execute_branch(&mut self) {
@@ -95,8 +95,12 @@ impl Cpu6502 {
     #[inline]
     #[allow(non_snake_case)]
     pub fn BRK(&mut self) -> Result<()> {
-        // BRK is executed in the main thread of CPU, don't need to implement anything
-        unimplemented!()
+        let pc = self.registers.pc;
+        self.push_stack16(pc)?;
+        let sr = self.status_register_byte(true);
+        self.push_stack(sr)?;
+        self.registers.pc = self.mem_read_u16(ADDRESS_BRK)?;
+        Ok(())
     }
 
     #[inline]

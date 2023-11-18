@@ -3,6 +3,8 @@ use std::{
     marker::PhantomData,
 };
 
+use crate::{cpu::Cpu6502, instruction::CpuInstruction};
+
 #[derive(Copy, Clone, Debug, Default)]
 pub struct CpuDebugger<T: Binary + Debug> {
     _marker_data: PhantomData<T>,
@@ -22,5 +24,12 @@ where
     pub fn hex(self, value: T) {
         let x = value;
         println!("{:0x?}", x)
+    }
+
+    pub fn debug_instr(self, cpu: &Cpu6502, instr: CpuInstruction) {
+        println!(
+            "PC: ${:0x?} | OPCODE: 0x{:0x?} | INSTRUCTION: {:?}",
+            cpu.registers.pc, instr.opcode, instr
+        );
     }
 }

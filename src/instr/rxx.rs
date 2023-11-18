@@ -51,7 +51,8 @@ impl Cpu6502 {
     #[inline]
     #[allow(non_snake_case)]
     pub fn RTS(&mut self) -> Result<()> {
-        self.registers.pc = self.pop_stack16()?.wrapping_sub(1);
+        let sv = self.pop_stack16()?;
+        self.registers.pc = sv.wrapping_add(1);
         Ok(())
     }
 }

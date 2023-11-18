@@ -1,5 +1,7 @@
+use crate::constant::{ADDRESS_TEST_PROGRAM, SP_ADDRESS_RESET};
+
 // reference: https://www.nesdev.org/wiki/CPU_registers
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct CpuRegister {
     /// accumulator (8-bit)
     pub a: u8,
@@ -17,4 +19,22 @@ pub struct CpuRegister {
     pub decimal: bool,            // 1000
     pub overflow: bool,           // 10000
     pub negative: bool,           // 100000
+}
+
+impl Default for CpuRegister {
+    fn default() -> Self {
+        Self {
+            a: 0,
+            x: 0,
+            y: 0,
+            pc: ADDRESS_TEST_PROGRAM,
+            sp: SP_ADDRESS_RESET,
+            carry: false,
+            zero: false,
+            interrupt_disabled: false,
+            decimal: false,
+            overflow: false,
+            negative: false,
+        }
+    }
 }

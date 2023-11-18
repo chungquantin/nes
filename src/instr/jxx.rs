@@ -15,7 +15,8 @@ impl Cpu6502 {
     #[allow(non_snake_case)]
     pub fn JSR(&mut self) -> Result<()> {
         let instr = self.instr.unwrap();
-        self.push_stack16(self.registers.pc.wrapping_sub(1))?;
+        let pc = self.registers.pc;
+        self.push_stack16(pc.wrapping_sub(1))?;
         self.registers.pc = instr.write_target.unwrap();
         Ok(())
     }

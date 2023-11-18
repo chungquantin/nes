@@ -6,6 +6,7 @@ use structopt::StructOpt;
 
 use crate::cli::Cli;
 use crate::constant::ADDRESS_BRK;
+use crate::constant::ADDRESS_TEST_PROGRAM;
 use crate::constant::MEMORY_MAX;
 use crate::constant::NEGATIVE_FLAG;
 use crate::constant::PC_ADDRESS_RESET;
@@ -29,8 +30,8 @@ pub struct Cpu6502 {
     pub instr: Option<CpuInstruction>, // The currently executing instruction
 }
 
-impl Default for Cpu6502 {
-    fn default() -> Self {
+impl Cpu6502 {
+    pub fn new() -> Self {
         let debugger = CpuDebugger::default();
         Self {
             debugger,
@@ -43,44 +44,40 @@ impl Default for Cpu6502 {
 }
 
 pub trait Clocked {
-    fn clocked(self: &mut Self) -> Result<()>;
+    fn clocked(self: &mut Self) -> Result<bool>;
 }
 
 impl Clocked for Cpu6502 {
-    fn clocked(self: &mut Self) -> Result<()> {
+    fn clocked(self: &mut Self) -> Result<bool> {
         // // load cpu program counter register at $8000
-        while self.registers.pc != ADDRESS_BRK {
-            if let Ok(opcode) = self.mem_read(self.registers.pc) {
-                let mut instr = self.decode_instruction(opcode as u8).unwrap();
-                let (addr, addr_value, num_bytes) =
-                    self.decode_addressing_mode(instr.address_mode)?;
-                instr.mode_args = addr_value;
-                instr.write_target = addr;
+        if let Ok(opcode) = self.mem_read(self.registers.pc) {
+            let (addr, addr_value, num_bytes, mut instr) =
+                self.decode_instruction(opcode as u8).unwrap();
 
-                if instr.opcode == Operation::BRK {
-                    println!("PROGRAM BREAK!");
-                    break;
-                }
+            instr.mode_args = addr_value;
+            instr.write_target = addr;
 
-                self.instr = Some(instr);
-                if self.clocks_to_pause > 0 {
-                    self.clocks_to_pause -= 1;
-                    continue;
-                }
-                println!(
-                    "PC: ${:0x?} | OPCODE: 0x{:0x?} | INSTRUCTION: {:?}",
-                    self.registers.pc, opcode, instr
-                );
-
-                self.execute_instruction(&instr)?;
-
-                self.registers.pc += num_bytes + 1;
-                self.clocks_to_pause += instr.cycle - 1;
-            } else {
-                break;
+            if instr.opcode == Operation::BRK {
+                self.debugger.debug_instr(self, instr);
+                return Ok(false);
             }
+
+            self.instr = Some(instr);
+
+            // Debug the instruction
+            self.debugger.debug_instr(self, instr);
+
+            println!("Program counter {:0x?}", self.registers.pc);
+
+            self.registers.pc = self.registers.pc.wrapping_add(num_bytes);
+            self.execute_instruction(&instr)?;
+
+            println!("After => Program counter {:0x?}", self.registers.pc);
+
+            self.clocks_to_pause = self.clocks_to_pause.wrapping_add(instr.cycle - 1);
+            return Ok(true);
         }
-        Ok(())
+        return Ok(false);
     }
 }
 
@@ -98,10 +95,9 @@ impl Stacked for Cpu6502 {
     #[must_use]
     #[inline]
     fn pop_stack(&mut self) -> Result<u8> {
-        let sp = self.registers.sp;
         // increase the stack pointer by 1, read from the base + offset address
         self.registers.sp = self.registers.sp.wrapping_add(1);
-        self.mem_read(get_sp_offset(sp))
+        self.mem_read(get_sp_offset(self.registers.sp))
     }
 }
 
@@ -194,11 +190,12 @@ impl Cpu6502 {
 
         self.registers.a = 0;
         self.registers.x = 0;
-        // Reset the address of program counter
+        // // Reset the address of program counter
         self.registers.pc = self.mem_read_u16(PC_ADDRESS_RESET).unwrap();
         Ok(())
     }
 
+    #[allow(unused)]
     pub fn load_program(self: &mut Self, program: Vec<u8>) -> Result<()> {
         // $8000–$FFFF: ROM and mapper registers ((see MMC1 and UxROM for examples))
         let program_rom_address = PRG_ROM_ADDRESS as usize;
@@ -209,27 +206,75 @@ impl Cpu6502 {
         self.mem_write_u16(PC_ADDRESS_RESET, PRG_ROM_ADDRESS)
             .unwrap();
 
+        assert_eq!(
+            self.mem_read_u16(PC_ADDRESS_RESET).unwrap(),
+            PRG_ROM_ADDRESS
+        );
+
         // Reset the cpu after loading the program
         self.reset()?;
 
         Ok(())
     }
 
-    pub fn run(self: &mut Self) -> Result<()> {
-        self.clocked()?;
+    pub fn load_test_program(self: &mut Self, program: Vec<u8>) -> Result<()> {
+        let program_rom_address = PRG_ROM_ADDRESS as usize;
+        self.memory[program_rom_address..(program_rom_address + program.len())]
+            .copy_from_slice(&program[..]);
+
+        // Write the value of program counter as the start address of PRG ROM
+        self.mem_write_u16(ADDRESS_TEST_PROGRAM, PRG_ROM_ADDRESS)
+            .unwrap();
+
+        assert_eq!(
+            self.mem_read_u16(ADDRESS_TEST_PROGRAM).unwrap(),
+            PRG_ROM_ADDRESS
+        );
+
         Ok(())
     }
 
-    fn decode_instruction(self: &Self, opcode: u8) -> Result<CpuInstruction> {
+    pub fn run(self: &mut Self) -> Result<()> {
+        let mut clock_status = true;
+        while clock_status && self.registers.pc != ADDRESS_BRK {
+            if self.clocks_to_pause > 0 {
+                self.clocks_to_pause -= 1;
+            }
+            clock_status = self.clocked()?;
+        }
+        Ok(())
+    }
+
+    #[allow(unused)]
+    pub fn bounded_run(self: &mut Self, steps: usize) -> Result<()> {
+        for _ in 0..steps {
+            let clock_status = self.clocked()?;
+            if !clock_status {
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode_instruction(
+        self: &Self,
+        opcode: u8,
+    ) -> Result<(Option<u16>, u16, u16, CpuInstruction)> {
         let (opcode, address_mode, cycle, extra_cycle) = &OPCODE_TABLE[opcode as usize];
-        Ok(CpuInstruction {
-            opcode: *opcode,
-            cycle: *cycle,
-            address_mode: *address_mode,
-            extra_cycle: *extra_cycle,
-            write_target: None,
-            mode_args: 0,
-        })
+        let (addr, addr_value, num_bytes) = self.decode_addressing_mode(*address_mode)?;
+        Ok((
+            addr,
+            addr_value,
+            num_bytes + 1,
+            CpuInstruction {
+                opcode: *opcode,
+                cycle: *cycle,
+                address_mode: *address_mode,
+                extra_cycle: *extra_cycle,
+                write_target: None,
+                mode_args: 0,
+            },
+        ))
     }
 
     fn execute_instruction(self: &mut Self, instruction: &CpuInstruction) -> Result<(), Error> {
