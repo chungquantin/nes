@@ -126,14 +126,45 @@ mod tests {
     }
 
     #[test]
+    fn test_bit() {
+        let program: Vec<u8> = vec![
+            0xa9, 0xff, // LDA #255
+            0x85, 0x01, // STA $01
+            0x24, 0x01, // BIT $01
+        ];
+        let mut cpu = create_test_cpu(program);
+        cpu.bounded_run(3).unwrap();
+        assert!(cpu.registers.overflow);
+    }
+
+    #[test]
+    fn test_flags() {
+        let program: Vec<u8> = vec![
+            0xA9, 0xFF, // LDA #$FF
+            0x85, 0x01, // STA $01 = 00
+            0x24, 0x01, // BIT $01 = FF
+            0xa9, 0x00, // LDA #$00
+            0x38, // SEC
+            0x78, // SEI
+            0xf8, // SED
+            0x08, // PHP
+            0x68, // PLA
+        ];
+        let mut cpu = create_test_cpu(program);
+        cpu.bounded_run(9).unwrap();
+        assert_eq!(cpu.registers.a, 111);
+    }
+
+    #[test]
     fn test_ror() {
         let mut cpu = self::create_test_cpu(vec![
             0xa9, 0x55, // LDA #$55
-            0x6a,
+            0x6a, // ROR
         ]);
         cpu.set_status_register_from_byte(0x24);
-        cpu.run().unwrap();
+        cpu.bounded_run(2).unwrap();
         assert_eq!(cpu.registers.a, 0x2A);
+        assert_eq!(cpu.registers.carry, true);
         assert_eq!(cpu.status_register_byte(true), 0x25);
     }
 
