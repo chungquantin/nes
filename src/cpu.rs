@@ -26,7 +26,7 @@ pub struct Cpu6502 {
     pub registers: CpuRegister,
     /// NES memory uses 16-bit for memory addressing
     /// The stack address space is hardwired to memory page $01, i.e. the address range $0100–$01FF (256–511)
-    pub memory: [u8; MEMORY_MAX],
+    pub memory: [u8; MEMORY_MAX], // 64KB
     pub instr: Option<CpuInstruction>, // The currently executing instruction
 }
 
@@ -103,7 +103,15 @@ impl Stacked for Cpu6502 {
 
 impl Mem for Cpu6502 {
     fn mem_read(&self, addr: u16) -> Result<u8> {
-        return Ok(self.memory[addr as usize]);
+        match addr {
+            0x0000..=0x1fff => {
+                // Mask to zero out the highest two bits in a 16-bit address
+                let mirror_down_addr = addr & 0b00000111_11111111;
+                println!("Read from address {:0x?}", mirror_down_addr);
+                Ok(self.memory[mirror_down_addr as usize])
+            }
+            _ => Ok(self.memory[addr as usize]),
+        }
     }
 
     fn mem_write(&mut self, addr: u16, data: u8) -> Result<()> {

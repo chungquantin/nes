@@ -1,4 +1,5 @@
 mod address;
+mod bus;
 mod cli;
 mod constant;
 mod cpu;
@@ -20,7 +21,7 @@ fn main() {
 }
 
 mod tests {
-    use crate::{constant::ADDRESS_TEST_PROGRAM, cpu::Cpu6502};
+    use crate::{constant::ADDRESS_TEST_PROGRAM, cpu::Cpu6502, mem::Mem};
 
     #[allow(unused)]
     fn create_test_cpu(program: Vec<u8>) -> Cpu6502 {
@@ -206,5 +207,25 @@ mod tests {
         cpu.set_status_register_from_byte(0b100111);
         cpu.run().unwrap();
         assert_eq!(cpu.status_register_byte(true), 0b100111);
+    }
+
+    #[test]
+    fn test_ram_mirror() {
+        let mut cpu = self::create_test_cpu(vec![0xa9, 0x01, 0x00]);
+        let sum_ram: u8 = cpu.memory[0x0000..0x2000].iter().sum();
+        // Make sure that the RAM is zeroed out
+        assert_eq!(sum_ram, 0);
+
+        cpu.mem_write(0x07FF, 21).unwrap();
+        let tmp_data = cpu.mem_read(0x07FF).unwrap();
+        assert_eq!(tmp_data, 21);
+
+        let data_at_0fff = cpu.mem_read(0x0FFF).unwrap();
+        let data_at_17ff = cpu.mem_read(0x17FF).unwrap();
+        let data_ata_1fff = cpu.mem_read(0x1FFF).unwrap();
+
+        assert_eq!(data_at_0fff, 21);
+        assert_eq!(data_at_17ff, 21);
+        assert_eq!(data_ata_1fff, 21);
     }
 }
