@@ -1,5 +1,4 @@
 mod address;
-mod bus;
 mod cli;
 mod constant;
 mod cpu;
@@ -8,6 +7,7 @@ mod instr;
 mod instruction;
 mod mem;
 mod opcode;
+mod ppu;
 mod register;
 mod stack;
 mod util;
@@ -20,6 +20,7 @@ fn main() {
     cpu.run().unwrap();
 }
 
+#[cfg(test)]
 mod tests {
     use crate::{constant::ADDRESS_TEST_PROGRAM, cpu::Cpu6502, mem::Mem};
 
@@ -227,5 +228,16 @@ mod tests {
         assert_eq!(data_at_0fff, 21);
         assert_eq!(data_at_17ff, 21);
         assert_eq!(data_ata_1fff, 21);
+    }
+
+    #[test]
+    fn test_ppu_mirror() {
+        let mut cpu = self::create_test_cpu(vec![0xa9, 0x01, 0x00]);
+        let ppu_data_addr: u16 = 0x2007;
+        assert_eq!(cpu.mem_read(ppu_data_addr).unwrap(), 0);
+
+        cpu.mem_write(0x3457, 21).unwrap();
+
+        assert_eq!(cpu.mem_read(ppu_data_addr).unwrap(), 21);
     }
 }

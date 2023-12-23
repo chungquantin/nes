@@ -1,6 +1,7 @@
 use anyhow::{Ok, Result};
 
 pub trait Mem {
+    fn mirror_down_addr(&self, addr: u16) -> u16;
     // Read data from memory
     fn mem_read(&self, addr: u16) -> Result<u8>;
     // Write data to memory

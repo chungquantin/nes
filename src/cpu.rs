@@ -102,20 +102,21 @@ impl Stacked for Cpu6502 {
 }
 
 impl Mem for Cpu6502 {
-    fn mem_read(&self, addr: u16) -> Result<u8> {
+    fn mirror_down_addr(&self, addr: u16) -> u16 {
         match addr {
-            0x0000..=0x1fff => {
-                // Mask to zero out the highest two bits in a 16-bit address
-                let mirror_down_addr = addr & 0b00000111_11111111;
-                println!("Read from address {:0x?}", mirror_down_addr);
-                Ok(self.memory[mirror_down_addr as usize])
-            }
-            _ => Ok(self.memory[addr as usize]),
+            // RAM Mirroring
+            0x0000..=0x1fff => addr & 0b00000111_11111111,
+            0x2000..=0x3fff => addr & 0x2007,
+            _ => addr,
         }
     }
 
+    fn mem_read(&self, addr: u16) -> Result<u8> {
+        Ok(self.memory[self.mirror_down_addr(addr) as usize])
+    }
+
     fn mem_write(&mut self, addr: u16, data: u8) -> Result<()> {
-        self.memory[addr as usize] = data;
+        self.memory[self.mirror_down_addr(addr) as usize] = data;
         Ok(())
     }
 }
