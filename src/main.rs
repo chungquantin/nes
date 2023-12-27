@@ -1,5 +1,4 @@
 mod address;
-mod bus;
 mod cli;
 mod constant;
 mod cpu;
