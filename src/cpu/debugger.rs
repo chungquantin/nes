@@ -3,7 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
-use crate::{cpu::Cpu6502, instruction::CpuInstruction};
+use crate::{cpu::instruction::CpuInstruction, cpu::Cpu6502};
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct CpuDebugger<T: Binary + Debug> {

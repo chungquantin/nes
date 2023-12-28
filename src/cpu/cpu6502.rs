@@ -11,13 +11,16 @@ use crate::constant::MEMORY_MAX;
 use crate::constant::NEGATIVE_FLAG;
 use crate::constant::PC_ADDRESS_RESET;
 use crate::constant::PRG_ROM_ADDRESS;
-use crate::debugger::CpuDebugger;
-use crate::instruction::CpuInstruction;
+use crate::cpu::debugger::CpuDebugger;
+use crate::cpu::instruction::CpuInstruction;
+use crate::cpu::opcode::{Operation, OPCODE_TABLE};
 use crate::mem::Mem;
-use crate::opcode::{Operation, OPCODE_TABLE};
-use crate::register::*;
 use crate::stack::get_sp_offset;
 use crate::stack::Stacked;
+
+use super::CpuRegister;
+
+// reference: https://www.nesdev.org/wiki/CPU_registers
 
 #[derive(Debug)]
 pub struct Cpu6502 {
@@ -26,18 +29,18 @@ pub struct Cpu6502 {
     pub registers: CpuRegister,
     /// NES memory uses 16-bit for memory addressing
     /// The stack address space is hardwired to memory page $01, i.e. the address range $0100–$01FF (256–511)
-    pub memory: [u8; MEMORY_MAX], // 64KB
+    pub mapper: [u8; MEMORY_MAX], // 64KB
     pub instr: Option<CpuInstruction>, // The currently executing instruction
 }
 
-impl Cpu6502 {
-    pub fn new() -> Self {
+impl Default for Cpu6502 {
+    fn default() -> Self {
         let debugger = CpuDebugger::default();
         Self {
             debugger,
             clocks_to_pause: 0,
             registers: CpuRegister::default(),
-            memory: [0u8; MEMORY_MAX],
+            mapper: [0u8; MEMORY_MAX],
             instr: None,
         }
     }
@@ -108,14 +111,14 @@ impl Mem for Cpu6502 {
                 // Mask to zero out the highest two bits in a 16-bit address
                 let mirror_down_addr = addr & 0b00000111_11111111;
                 println!("Read from address {:0x?}", mirror_down_addr);
-                Ok(self.memory[mirror_down_addr as usize])
+                Ok(self.mapper[mirror_down_addr as usize])
             }
-            _ => Ok(self.memory[addr as usize]),
+            _ => Ok(self.mapper[addr as usize]),
         }
     }
 
     fn mem_write(&mut self, addr: u16, data: u8) -> Result<()> {
-        self.memory[addr as usize] = data;
+        self.mapper[addr as usize] = data;
         Ok(())
     }
 }
@@ -207,7 +210,7 @@ impl Cpu6502 {
     pub fn load_program(self: &mut Self, program: Vec<u8>) -> Result<()> {
         // $8000–$FFFF: ROM and mapper registers ((see MMC1 and UxROM for examples))
         let program_rom_address = PRG_ROM_ADDRESS as usize;
-        self.memory[program_rom_address..(program_rom_address + program.len())]
+        self.mapper[program_rom_address..(program_rom_address + program.len())]
             .copy_from_slice(&program[..]);
 
         // Write the value of program counter as the start address of PRG ROM
@@ -227,7 +230,7 @@ impl Cpu6502 {
 
     pub fn load_test_program(self: &mut Self, program: Vec<u8>) -> Result<()> {
         let program_rom_address = PRG_ROM_ADDRESS as usize;
-        self.memory[program_rom_address..(program_rom_address + program.len())]
+        self.mapper[program_rom_address..(program_rom_address + program.len())]
             .copy_from_slice(&program[..]);
 
         // Write the value of program counter as the start address of PRG ROM

@@ -1,6 +1,5 @@
 use crate::constant::{ADDRESS_TEST_PROGRAM, SP_ADDRESS_RESET};
 
-// reference: https://www.nesdev.org/wiki/CPU_registers
 #[derive(Clone, Debug)]
 pub struct CpuRegister {
     /// accumulator (8-bit)

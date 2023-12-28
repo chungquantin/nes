@@ -1,20 +1,16 @@
-mod address;
 mod cli;
 mod constant;
 mod cpu;
-mod debugger;
-mod instr;
-mod instruction;
 mod mem;
-mod opcode;
-mod register;
+mod nes;
+mod ppu;
 mod stack;
 mod util;
 
 use crate::cpu::Cpu6502;
 
 fn main() {
-    let mut cpu = Cpu6502::new();
+    let mut cpu = Cpu6502::default();
     cpu.load_test_program(vec![0x00]).unwrap();
     cpu.run().unwrap();
 }
@@ -24,9 +20,9 @@ mod tests {
 
     #[allow(unused)]
     fn create_test_cpu(program: Vec<u8>) -> Cpu6502 {
-        let mut cpu = Cpu6502::new();
+        let mut cpu = Cpu6502::default();
         let rom_address = ADDRESS_TEST_PROGRAM as usize;
-        cpu.memory[rom_address..(rom_address + program.len())].copy_from_slice(&program[..]);
+        cpu.mapper[rom_address..(rom_address + program.len())].copy_from_slice(&program[..]);
         cpu.registers.pc = ADDRESS_TEST_PROGRAM;
         return cpu;
     }
@@ -211,7 +207,7 @@ mod tests {
     #[test]
     fn test_ram_mirror() {
         let mut cpu = self::create_test_cpu(vec![0xa9, 0x01, 0x00]);
-        let sum_ram: u8 = cpu.memory[0x0000..0x2000].iter().sum();
+        let sum_ram: u8 = cpu.mapper[0x0000..0x2000].iter().sum();
         // Make sure that the RAM is zeroed out
         assert_eq!(sum_ram, 0);
 

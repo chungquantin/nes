@@ -1,5 +1,5 @@
-use crate::address::*;
-use crate::instruction::CycleCount;
+use crate::cpu::address::*;
+use crate::cpu::instruction::CycleCount;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Operation {
@@ -84,7 +84,6 @@ pub enum Operation {
 use Operation::*;
 
 pub const OPCODE_TABLE: [(Operation, AddressingMode, CycleCount, CycleCount); 256] =
-    // TODO Audit each record to see that it was input correctly
     // (Operation, addressing mode, clock cycles, extra clock cycles if page boundary crossed)
     [
         // 0x

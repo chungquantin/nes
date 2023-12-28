@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
-use crate::address::*;
-use crate::opcode::Operation;
+use crate::cpu::address::*;
+use crate::cpu::opcode::Operation;
 
 pub type CycleCount = u8;
 
